@@ -206,9 +206,9 @@ def register_callbacks(app):
         
         rows = []
         if first_row_count > 0:
-            rows.append(dbc.Row(graph_cards[:first_row_count], className="gx-0"))
+            rows.append(dbc.Row(graph_cards[:first_row_count], className="g-1")) # Borders between graphs
         if second_row_count > 0:
-            rows.append(dbc.Row(graph_cards[first_row_count:], className="gx-0"))
+            rows.append(dbc.Row(graph_cards[first_row_count:], className="g-1")) # Borders between graphs
         
         return rows
 
