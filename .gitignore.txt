@@ -1,0 +1,21 @@
+# Virtual environment
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Local development files
+*.log
+*.pid
+
+# macOS system files
+.DS_Store
+
+# IDE-specific files
+.idea/
+*.code-workspace
+
+# Cache files from data fetching (optional, if you don't want to track these)
+data/fred_cache.pkl
+data/release_dates_cache.json
