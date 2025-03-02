@@ -26,7 +26,6 @@ INDICATORS = {
 
     # Labor Market
     "Unemployment Rate": {"id": "UNRATE", "description": "Unemployment Rate"},
-    "Unemployment Level": {"id": "UNEMPLOY", "description": "Unemployment Level"},
     "Labor Force Participation": {"id": "CIVPART", "description": "Labor Force Participation Rate"},
     "Total Nonfarm Employment": {"id": "PAYEMS", "description": "All Employees, Total Nonfarm"},
     "Job Openings": {"id": "JTSJOL", "description": "Job Openings: Total Nonfarm"},
@@ -72,7 +71,7 @@ INDICATOR_GROUPS = {
         "30-Year Mortgage Rate", "Aaa Corporate Bond Yield", "High Yield OAS"
     ],
     "Labor Market": [
-        "Unemployment Rate", "Unemployment Level", "Labor Force Participation",
+        "Unemployment Rate", "Labor Force Participation",
         "Total Nonfarm Employment", "Job Openings", "Average Hourly Earnings",
         "Initial Claims"
     ],
