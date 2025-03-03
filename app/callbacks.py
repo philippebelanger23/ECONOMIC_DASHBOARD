@@ -90,20 +90,43 @@ def create_graph(data, col, graph_type):
         "yoy" if "YoY" in col else "raw",
         for_display=True,
     )
+    # Wrap title by inserting <br> after a certain number of characters or words
+    max_chars_per_line = 50  # Adjust this value based on your preference
+    wrapped_title = ""
+    current_line = ""
+    for word in f"{display_col} Over Time".split():
+        if len(current_line) + len(word) > max_chars_per_line:
+            wrapped_title += current_line + "<br>"
+            current_line = word
+        else:
+            current_line += (" " if current_line else "") + word
+    wrapped_title += current_line  # Add the last line
+
     if graph_type == "line":
-        fig = px.line(data, x=data.index, y=col, title=f"{display_col} Over Time")
+        fig = px.line(data, x=data.index, y=col, title=wrapped_title)
     elif graph_type == "bar":
-        fig = px.bar(data, x=data.index, y=col, title=f"{display_col} Over Time")
+        fig = px.bar(data, x=data.index, y=col, title=wrapped_title)
     else:  # area
-        fig = px.area(data, x=data.index, y=col, title=f"{display_col} Over Time")
+        fig = px.area(data, x=data.index, y=col, title=wrapped_title)
 
     fig.update_traces(
         hovertemplate="<b>%{y:.2f}</b><br>Date: %{x|%Y-%m-%d}<extra></extra>"
     )
     fig.update_layout(
+        title_font=dict(size=18, weight="bold"),
+        title_x=0.5,  # Center the title
         xaxis_title="",
-        xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True),
+        xaxis=dict(
+            showgrid=False,
+           # title_font=dict(weight="bold"),
+           # tickfont=dict(weight="bold")
+        ),
+        yaxis=dict(
+            showgrid=True,
+            autorange=True,  # Enable y-axis autoscaling by default
+           # title_font=dict(weight="bold"),
+           # tickfont=dict(weight="bold")
+        ),
         plot_bgcolor="white",
         paper_bgcolor="white",
     )
@@ -204,7 +227,7 @@ def register_callbacks(app):
         first_row_width = 12 // first_row_count if first_row_count > 0 else 12
         second_row_width = 12 // second_row_count if second_row_count > 0 else 12
 
-        available_height = 76
+        available_height = 80
         graph_height = available_height / num_rows
 
         graph_cards = []
@@ -287,9 +310,9 @@ def register_callbacks(app):
 
         rows = []
         if first_row_count > 0:
-            rows.append(dbc.Row(graph_cards[:first_row_count], className="gx-0"))
+            rows.append(dbc.Row(graph_cards[:first_row_count], className="g-1"))
         if second_row_count > 0:
-            rows.append(dbc.Row(graph_cards[first_row_count:], className="gx-0"))
+            rows.append(dbc.Row(graph_cards[first_row_count:], className="g-1"))
 
         return rows
 
@@ -315,6 +338,10 @@ def register_callbacks(app):
         if "autosize" in relayout_data and relayout_data["autosize"]:
             return None
 
+        # Debug: Print relayoutData to see what Plotly sends
+        print(f"Relayout data: {relayout_data}")
+
+        # Only store x-axis range, explicitly ignore y-axis
         if "xaxis.range[0]" in relayout_data and "xaxis.range[1]" in relayout_data:
             return {
                 "xaxis.range": [
@@ -356,22 +383,6 @@ def register_callbacks(app):
         slider_range,
         zoom_state,
     ):
-        """Update an individual graph based on user selections and date range.
-
-        Args:
-            indicator (str): Selected indicator (e.g., 'GDP').
-            transform (str): Selected transformation ('raw', 'mom', 'qoq', 'yoy').
-            graph_type (str): Selected graph type ('line', 'bar', 'area').
-            start_date (str): Start date from DatePickerRange.
-            end_date (str): End date from DatePickerRange.
-            toggle_recessions (list): Whether to show recession bars.
-            toggle_events (list): Whether to show key events.
-            slider_range (list): RangeSlider value (months since 1990).
-            zoom_state (dict): Current zoom state of the graph.
-
-        Returns:
-            plotly.graph_objs.Figure: The updated Plotly figure.
-        """
         today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
         start_months, end_months = slider_range
         start_dt = months_to_date(start_months)
@@ -396,8 +407,19 @@ def register_callbacks(app):
             fig, indicator, toggle_recessions, toggle_events, start_dt, end_dt
         )
 
+        # Apply x-axis zoom if present, and force y-axis to autorange
         if zoom_state and "xaxis.range" in zoom_state:
-            fig.update_layout(xaxis={"range": zoom_state["xaxis.range"]})
+            x_start, x_end = zoom_state["xaxis.range"]
+            # Ensure x-axis range is applied
+            fig.update_xaxes(range=[x_start, x_end])
+            # Force y-axis to autorange by updating axes directly
+            fig.update_yaxes(autorange=True)
+        else:
+            # Ensure y-axis is autoranged even without zoom
+            fig.update_yaxes(autorange=True)
+
+        # Debug: Print final layout to confirm settings
+        print(f"Final y-axis layout: {fig.layout.yaxis}")
 
         return fig
 
