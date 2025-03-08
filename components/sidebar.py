@@ -129,7 +129,7 @@ sidebar = html.Div(
                 dbc.CardHeader("Summary Statistics"),
                 dbc.CardBody(
                     id="summary-stats",
-                    style={"padding": "10px", "overflowX": "auto", "maxHeight": "200px", "overflowY": "auto"}
+                    style={"padding": "10px", "overflowX": "auto", "overflowY": "auto"}
                 ),
             ],
             style={"margin-top": MARGIN_FILTERS_TO_SUMMARY},
