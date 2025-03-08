@@ -19,6 +19,12 @@ from config.settings import RECESSIONS_FILE, RSS_FEED_URLS
 from data.data_fetcher import fetch_rss_feed, get_all_next_release_dates
 from data.data_processing import get_economic_data
 from data.mappings import INDICATORS, INDICATOR_GROUPS
+from components.sidebar import (
+    create_economics_sidebar,
+    create_correlations_sidebar,
+    create_funds_flow_sidebar,
+    create_news_sidebar,
+)
 
 # -------------------
 # Global Data Loading
@@ -612,3 +618,18 @@ def register_callbacks(app):
             html.Div(error_message, style={"color": "red", "text-align": "center", "margin-bottom": "10px"}) if error_message else "",
             summary_table,
         ]
+
+    @app.callback(
+        Output("sidebar-content", "children"),
+        Input("dashboard-tabs", "value")
+    )
+    def update_sidebar(selected_tab):
+        if selected_tab == "tab-economics":
+            return create_economics_sidebar()
+        elif selected_tab == "tab-correlations":
+            return create_correlations_sidebar()
+        elif selected_tab == "tab-funds-flow":
+            return create_funds_flow_sidebar()
+        elif selected_tab == "tab-news":
+            return create_news_sidebar()
+        return create_economics_sidebar()  # Default to economics sidebar
