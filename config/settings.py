@@ -6,7 +6,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRED_API_KEY = os.getenv("FRED_API_KEY", "a734c74dab0f321bd97ed766dc2c8e4f")
 RECESSIONS_FILE = BASE_DIR / "data" / "recessions.json"
 RSS_FEED_URLS = {
-    "NY TIMES": "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
-    "EIA": "https://www.eia.gov/rss/todayinenergy.xml",
+    "Federal Reserve": "https://www.federalreserve.gov/feeds/press_all.xml",
+    "IMF": "https://www.imf.org/en/News/rss",
+    "EIA": "https://www.eia.gov/rss/todayinenergy.xml"
 }
 NUM_ARTICLES = 3  # Number of RSS articles to display

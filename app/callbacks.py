@@ -509,7 +509,6 @@ def register_callbacks(app):
 
         return f"Last Updated: {last_date}", "", summary_table
 
-
     @app.callback(
         Output("date-range-slider", "value"),
         Input("btn-last-3mo", "n_clicks"),
@@ -517,7 +516,7 @@ def register_callbacks(app):
         Input("btn-last-12mo", "n_clicks"),
         Input("btn-last-24mo", "n_clicks"),
         State("date-range-slider", "value"),
-)
+    )
     def update_date_range_from_buttons(n_clicks_3mo, n_clicks_6mo, n_clicks_12mo, n_clicks_24mo, current_range):
         ctx = callback_context
         if not ctx.triggered:
@@ -544,59 +543,55 @@ def register_callbacks(app):
 
         return [start_month, end_month]
 
-
-
     @app.callback(
-        Output("rss-news-list", "children"),
-        Input("rss-feed-selector", "value"),
-        Input("refresh-rss-button", "n_clicks"),
-        State("rss-feed-selector", "value"),
+        Output({"type": "news-list", "feed": ALL}, "children"),
+        [Input({"type": "refresh-button", "feed": ALL}, "n_clicks")],
+        prevent_initial_call=False
     )
-    def update_rss_news(selected_feed, n_clicks, current_feed):
-        ctx = callback_context
-        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0] if ctx.triggered else None
-
-        feed_to_fetch = current_feed if triggered_id == "refresh-rss-button" else selected_feed
-
-        if feed_to_fetch not in RSS_FEED_URLS:
-            feed_to_fetch = list(RSS_FEED_URLS.keys())[0]
-
-        articles = fetch_rss_feed(RSS_FEED_URLS[feed_to_fetch])
-        if not articles:
-            return [html.Li("Failed to load articles.", style={"color": "red"})]
-
-        return [
-            html.Li(
-                [
-                    html.Div(
+    def update_all_rss_news(n_clicks):
+        feeds = list(RSS_FEED_URLS.keys())
+        all_news_lists = []
+        
+        for feed_key in feeds:
+            articles = fetch_rss_feed(RSS_FEED_URLS[feed_key])
+            if not articles:
+                news_list = [html.Li("Failed to load articles.", style={"color": "red"})]
+            else:
+                news_list = [
+                    html.Li(
                         [
-                            html.A(
-                                article["title"],
-                                href=article["link"],
-                                target="_blank",
-                                style={
-                                    "font-weight": "bold",
-                                    "color": "#007bff",
-                                    "text-decoration": "none",
-                                },
-                                className="rss-title",
-                            ),
                             html.Div(
-                                f"Published: {article['pub_date']}",
-                                style={"font-size": "12px", "color": "gray", "margin-top": "2px"},
-                            ),
-                            html.Div(
-                                article["summary"],
-                                style={"font-size": "14px", "color": "#333", "margin-top": "4px"},
-                            ),
-                        ],
-                        style={"margin-bottom": "10px"},
+                                [
+                                    html.A(
+                                        article["title"],
+                                        href=article["link"],
+                                        target="_blank",
+                                        style={
+                                            "font-weight": "bold",
+                                            "color": "#007bff",
+                                            "text-decoration": "none",
+                                        },
+                                        className="rss-title",
+                                    ),
+                                    html.Div(
+                                        f"Published: {article['pub_date']}",
+                                        style={"font-size": "12px", "color": "gray", "margin-top": "2px"},
+                                    ),
+                                    html.Div(
+                                        article["summary"],
+                                        style={"font-size": "14px", "color": "#333", "margin-top": "4px"},
+                                    ),
+                                ],
+                                style={"margin-bottom": "10px"},
+                            )
+                        ]
                     )
+                    for article in articles
                 ]
-            )
-            for article in articles
-        ]
-    
+            all_news_lists.append(news_list)
+        
+        return all_news_lists
+
     @app.callback(
         Output("summary-stats-container", "children"),
         [

@@ -8,14 +8,44 @@ content = dbc.Container(
     [
         dcc.Tabs(
             id="dashboard-tabs",
-            value="tab-graphs",  # Default active tab
+            value="tab-economics",  # Default active tab
             children=[
                 dcc.Tab(
-                    label="Economic Graphs",
-                    value="tab-graphs",
+                    label="Economics",
+                    value="tab-economics",
                     children=[
                         dbc.Row(
                             id="graph-container",
+                            style={"margin-top": "10px"},
+                        )
+                    ],
+                ),
+                dcc.Tab(
+                    label="Correlations",
+                    value="tab-correlations",
+                    children=[
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    html.Div(id="correlations-container"),
+                                    width=12,
+                                ),
+                            ],
+                            style={"margin-top": "10px"},
+                        )
+                    ],
+                ),
+                dcc.Tab(
+                    label="Funds Flow",
+                    value="tab-funds-flow",
+                    children=[
+                        dbc.Row(
+                            [
+                                dbc.Col(
+                                    html.Div(id="funds-flow-container"),
+                                    width=12,
+                                ),
+                            ],
                             style={"margin-top": "10px"},
                         )
                     ],
@@ -27,21 +57,6 @@ content = dbc.Container(
                         dbc.Row(
                             [
                                 dbc.Col(rss_news, width=12),
-                            ],
-                            style={"margin-top": "10px"},
-                        )
-                    ],
-                ),
-                dcc.Tab(
-                    label="Summary Stats",
-                    value="tab-summary",
-                    children=[
-                        dbc.Row(
-                            [
-                                dbc.Col(
-                                    html.Div(id="summary-stats-container"),
-                                    width=12,
-                                ),
                             ],
                             style={"margin-top": "10px"},
                         )
