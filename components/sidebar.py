@@ -171,7 +171,49 @@ def create_funds_flow_sidebar():
         ),
         dbc.Card(
             [
-                html.H3("Flow Settings", className="text-center"),
+                html.H3("Analysis Settings", className="text-center"),
+                html.Label("Date Range", style={"margin-top": "10px"}),
+                dcc.DatePickerRange(
+                    id="date-picker",
+                    min_date_allowed="1970-01-01",
+                    max_date_allowed=today_str,
+                    start_date="2020-01-01",
+                    end_date=today_str,
+                    display_format="YYYY-MM-DD",
+                    style={"width": "100%", "textAlign": "center"},
+                ),
+                html.Label("Zoom Date Range", style={"margin-top": "10px"}),
+                dcc.RangeSlider(
+                    id="date-range-slider",
+                    min=min_month,
+                    max=max_month,
+                    step=1,
+                    value=[default_start_month, default_end_month],
+                    marks=marks,
+                    tooltip={"placement": "bottom", "always_visible": True},
+                ),
+                dbc.ButtonGroup(
+                    [
+                        dbc.Button("Last 3mo", id="btn-last-3mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1"),
+                        dbc.Button("Last 6mo", id="btn-last-6mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1"),
+                        dbc.Button("Last 12mo", id="btn-last-12mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1"),
+                        dbc.Button("Last 24mo", id="btn-last-24mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1"),
+                    ],
+                    className="d-flex justify-content-center",
+                    style={"margin-top": "10px"},
+                ),
+                html.Hr(style={"margin": "15px 0"}),
+                html.Label("Visualization Type", style={"margin-top": "10px"}),
+                dcc.RadioItems(
+                    id="visualization-type",
+                    options=[
+                        {"label": "Sector Rotation", "value": "sector_rotation"},
+                        {"label": "Relative Analysis", "value": "relative_analysis"},
+                    ],
+                    value="sector_rotation",
+                    style={"margin-top": "5px"},
+                ),
+                html.Hr(style={"margin": "15px 0"}),
                 html.Label("Select Flow Type", style={"margin-top": "10px"}),
                 dcc.Dropdown(
                     id="flow-type-selector",

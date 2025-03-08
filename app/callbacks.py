@@ -11,6 +11,7 @@ import dash
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from dash import dcc, html, callback_context
 from dash.dependencies import Input, Output, ALL, MATCH, State
 
@@ -394,6 +395,7 @@ def register_callbacks(app):
         Output("date-picker", "start_date"),
         Output("date-picker", "end_date"),
         Input("date-range-slider", "value"),
+        prevent_initial_call=True
     )
     def update_date_picker(slider_range):
         today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
@@ -517,11 +519,14 @@ def register_callbacks(app):
 
     @app.callback(
         Output("date-range-slider", "value"),
-        Input("btn-last-3mo", "n_clicks"),
-        Input("btn-last-6mo", "n_clicks"),
-        Input("btn-last-12mo", "n_clicks"),
-        Input("btn-last-24mo", "n_clicks"),
-        State("date-range-slider", "value"),
+        [
+            Input("btn-last-3mo", "n_clicks"),
+            Input("btn-last-6mo", "n_clicks"),
+            Input("btn-last-12mo", "n_clicks"),
+            Input("btn-last-24mo", "n_clicks")
+        ],
+        [State("date-range-slider", "value")],
+        prevent_initial_call=True
     )
     def update_date_range_from_buttons(n_clicks_3mo, n_clicks_6mo, n_clicks_12mo, n_clicks_24mo, current_range):
         ctx = callback_context
@@ -633,3 +638,233 @@ def register_callbacks(app):
         elif selected_tab == "tab-news":
             return create_news_sidebar()
         return create_economics_sidebar()  # Default to economics sidebar
+
+    @app.callback(
+        Output("funds-flow-container", "children"),
+        [
+            Input("date-range-slider", "value"),
+            Input("visualization-type", "value"),
+            Input("flow-type-selector", "value"),
+            Input("flow-period", "value"),
+            Input("date-picker", "start_date"),
+            Input("date-picker", "end_date")
+        ]
+    )
+    def update_funds_flow(slider_range, viz_type, flow_type, flow_period, start_date, end_date):
+        today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
+        start_months, end_months = slider_range
+        start_dt = months_to_date(start_months)
+        end_dt = months_to_date(end_months)
+        end_dt = min(end_dt, today)
+
+        picker_start = pd.to_datetime(start_date)
+        picker_end = pd.to_datetime(end_date)
+        start_dt = max(start_dt, picker_start)
+        end_dt = min(end_dt, picker_end)
+        
+        if viz_type == "sector_rotation":
+            # Create a figure for sector rotation
+            sectors = ['Technology', 'Healthcare', 'Financials', 'Consumer Discretionary', 
+                      'Consumer Staples', 'Industrials', 'Energy', 'Materials', 
+                      'Utilities', 'Real Estate', 'Communication Services']
+            
+            # Sample data - in production this would come from your data source
+            flows = [15, 10, -5, 8, 3, -2, 12, -4, 6, -8, 7]  # Example fund flows in billions
+            performance = [8, 5, -2, 6, 2, -1, 10, -3, 4, -5, 5]  # Example sector performance %
+            
+            fig = px.scatter(
+                x=performance,
+                y=flows,
+                size=[abs(f) * 2 for f in flows],
+                text=sectors,
+                title=f"Sector Rotation Analysis ({flow_type.replace('_', ' ').title()} - {flow_period})",
+                labels={
+                    'x': 'Sector Performance (%)',
+                    'y': 'Fund Flows (Billions $)',
+                    'size': 'Absolute Flow'
+                }
+            )
+            
+            fig.update_traces(
+                textposition='top center',
+                marker=dict(
+                    sizemode='area',
+                    sizeref=2.*max(flows)/(40.**2),
+                    sizemin=4,
+                    color=['#2ecc71' if f > 0 else '#e74c3c' for f in flows]
+                )
+            )
+            
+            fig.update_layout(
+                showlegend=False,
+                plot_bgcolor='white',
+                title_x=0.5,
+                title_font_size=20,
+                margin=dict(l=50, r=50, t=80, b=50),
+                shapes=[
+                    dict(
+                        type="line",
+                        x0=min(performance),
+                        y0=0,
+                        x1=max(performance),
+                        y1=0,
+                        line=dict(color="black", width=1, dash="dash")
+                    ),
+                    dict(
+                        type="line",
+                        x0=0,
+                        y0=min(flows),
+                        x1=0,
+                        y1=max(flows),
+                        line=dict(color="black", width=1, dash="dash")
+                    )
+                ],
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgrey'),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgrey'),
+                paper_bgcolor='white',
+                annotations=[
+                    dict(
+                        x=max(performance) * 0.75,
+                        y=max(flows) * 0.75,
+                        text="Leaders<br>(Strong Performance,<br>Inflows)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=min(performance) * 0.75,
+                        y=max(flows) * 0.75,
+                        text="Contrarian Bets<br>(Weak Performance,<br>Inflows)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=max(performance) * 0.75,
+                        y=min(flows) * 0.75,
+                        text="Profit Taking<br>(Strong Performance,<br>Outflows)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=min(performance) * 0.75,
+                        y=min(flows) * 0.75,
+                        text="Laggards<br>(Weak Performance,<br>Outflows)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    )
+                ]
+            )
+        
+        else:  # relative_analysis
+            # Sample data for relative analysis
+            sectors = ['Technology', 'Healthcare', 'Financials', 'Consumer Discretionary', 
+                      'Consumer Staples', 'Industrials', 'Energy', 'Materials', 
+                      'Utilities', 'Real Estate', 'Communication Services']
+            
+            # Sample data - in production this would come from your data source
+            relative_strength = [1.2, 0.8, 0.9, 1.1, 0.95, 1.05, 1.3, 0.85, 0.75, 0.9, 1.15]
+            relative_momentum = [0.1, -0.05, 0.02, 0.08, -0.03, 0.04, 0.15, -0.07, -0.12, 0.03, 0.07]
+            
+            fig = px.scatter(
+                x=relative_strength,
+                y=relative_momentum,
+                size=[abs(m) * 20 for m in relative_momentum],  # Size based on momentum
+                text=sectors,
+                title=f"Relative Strength vs Momentum Analysis ({flow_type.replace('_', ' ').title()} - {flow_period})",
+                labels={
+                    'x': 'Relative Strength (vs Index)',
+                    'y': 'Relative Momentum (WoW Change)',
+                    'size': 'Absolute Momentum'
+                }
+            )
+            
+            fig.update_traces(
+                textposition='top center',
+                marker=dict(
+                    sizemode='area',
+                    sizeref=2.*max(abs(min(relative_momentum)), abs(max(relative_momentum)))/(40.**2),
+                    sizemin=4,
+                    color=['#2ecc71' if m > 0 else '#e74c3c' for m in relative_momentum]
+                )
+            )
+            
+            fig.update_layout(
+                showlegend=False,
+                plot_bgcolor='white',
+                title_x=0.5,
+                title_font_size=20,
+                margin=dict(l=50, r=50, t=80, b=50),
+                shapes=[
+                    dict(
+                        type="line",
+                        x0=min(relative_strength),
+                        y0=0,
+                        x1=max(relative_strength),
+                        y1=0,
+                        line=dict(color="black", width=1, dash="dash")
+                    ),
+                    dict(
+                        type="line",
+                        x0=1,  # Reference line at 1.0 (index level)
+                        y0=min(relative_momentum),
+                        x1=1,
+                        y1=max(relative_momentum),
+                        line=dict(color="black", width=1, dash="dash")
+                    )
+                ],
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgrey'),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='lightgrey'),
+                paper_bgcolor='white',
+                annotations=[
+                    dict(
+                        x=max(relative_strength) * 0.75,
+                        y=max(relative_momentum) * 0.75,
+                        text="Strong & Improving<br>(High RS, Rising)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=min(relative_strength) * 1.1,
+                        y=max(relative_momentum) * 0.75,
+                        text="Weak but Improving<br>(Low RS, Rising)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=max(relative_strength) * 0.75,
+                        y=min(relative_momentum) * 0.75,
+                        text="Strong but Weakening<br>(High RS, Falling)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    ),
+                    dict(
+                        x=min(relative_strength) * 1.1,
+                        y=min(relative_momentum) * 0.75,
+                        text="Weak & Weakening<br>(Low RS, Falling)",
+                        showarrow=False,
+                        font=dict(size=10, color='rgba(0,0,0,0.5)'),
+                        align='center'
+                    )
+                ]
+            )
+        
+        return dbc.Card(
+            dbc.CardBody(
+                dcc.Graph(
+                    figure=fig,
+                    config={'displayModeBar': False},
+                    style={
+                        'height': '80vh',
+                        'width': '100%'
+                    }
+                ),
+                style={'padding': '5px'}
+            ),
+            style={'margin': '10px', 'height': '85vh'}
+        )
