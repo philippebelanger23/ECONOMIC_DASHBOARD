@@ -3,4 +3,4 @@
 
 
 #ACCESS DIRECTORY
-cd Documents/GitHub/ECONOMIC_DASHBOARD 
+cd Documents/GitHub/Economic_Dashboard_Python

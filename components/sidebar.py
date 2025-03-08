@@ -37,6 +37,8 @@ for year in range(1990, today.year + 1, 5):
     if month_value <= max_month:  # Ensure mark doesn’t exceed max_month
         marks[month_value] = str(year)
 
+# ... (keep the existing imports and top part unchanged)
+
 sidebar = html.Div(
     [
         html.H1(
@@ -55,9 +57,9 @@ sidebar = html.Div(
                 dcc.DatePickerRange(
                     id="date-picker",
                     min_date_allowed="1970-01-01",
-                    max_date_allowed=today_str,  # Set to today's date (e.g., '2025-03-01')
+                    max_date_allowed=today_str,
                     start_date="2020-01-01",
-                    end_date=today_str,  # Set default end date to today
+                    end_date=today_str,
                     display_format="YYYY-MM-DD",
                     style={"width": "100%", "textAlign": "center"},
                 ),
@@ -65,15 +67,24 @@ sidebar = html.Div(
                 dcc.RangeSlider(
                     id="date-range-slider",
                     min=min_month,
-                    max=max_month,  # Max is the current month (e.g., March 2025 = 420 months since Jan 1990)
-                    step=1,  # Step by month
-                    value=[
-                        default_start_month,
-                        default_end_month,
-                    ],  # Default range from Jan 2006 to today
-                    marks=marks,  # Marks every 5 years (e.g., 1990, 1995, ..., 2025)
+                    max=max_month,
+                    step=1,
+                    value=[default_start_month, default_end_month],
+                    marks=marks,
                     tooltip={"placement": "bottom", "always_visible": True},
                 ),
+                # Centered quick date selection buttons
+                dbc.ButtonGroup(
+                    [
+                        dbc.Button("Last 3mo", id="btn-last-3mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1", title="Select the last 3 months"),
+                        dbc.Button("Last 6mo", id="btn-last-6mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1", title="Select the last 6 months"),
+                        dbc.Button("Last 12mo", id="btn-last-12mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1", title="Select the last 12 months"),
+                        dbc.Button("Last 24mo", id="btn-last-24mo", n_clicks=0, color="primary", outline=True, size="sm", className="me-1", title="Select the last 24 months"),
+                    ],
+                    className="d-flex justify-content-center",  # Center the buttons
+                    style={"margin-top": "10px"},
+                ),
+                # Move Select Indicator Group dropdown below the buttons
                 html.Label("Select Indicator Group", style={"margin-top": "10px"}),
                 dcc.Dropdown(
                     id="indicator-group-selector",
@@ -114,7 +125,13 @@ sidebar = html.Div(
             style={"width": "100%", "padding": "5px"},
         ),
         dbc.Card(
-            [dbc.CardHeader("Summary Statistics"), dbc.CardBody(id="summary-stats")],
+            [
+                dbc.CardHeader("Summary Statistics"),
+                dbc.CardBody(
+                    id="summary-stats",
+                    style={"padding": "10px", "overflowX": "auto", "maxHeight": "200px", "overflowY": "auto"}
+                ),
+            ],
             style={"margin-top": MARGIN_FILTERS_TO_SUMMARY},
         ),
     ]

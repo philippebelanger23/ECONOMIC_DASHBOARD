@@ -1,8 +1,10 @@
-# app/callbacks.py
+# app/callbacks.py (corrected version)
 # Standard library imports
 import json
 import math
+import dash_table
 from datetime import datetime
+from dash import html
 
 # Third-party imports
 import dash
@@ -18,7 +20,6 @@ from data.data_fetcher import fetch_rss_feed, get_all_next_release_dates
 from data.data_processing import get_economic_data
 from data.mappings import INDICATORS, INDICATOR_GROUPS
 
-
 # -------------------
 # Global Data Loading
 # -------------------
@@ -32,37 +33,17 @@ with open("data/events.json", "r") as f:
 
 next_release_dates = get_all_next_release_dates()
 
-
 # -------------------
 # Helper Functions
 # -------------------
 def months_to_date(months):
-    """Convert a number of months since January 1990 to a pandas Timestamp.
-
-    Args:
-        months (int): Number of months since January 1990 (e.g., 192 for January 2006).
-
-    Returns:
-        pandas.Timestamp: The corresponding date (e.g., '2006-01-01').
-    """
     start_date = pd.to_datetime("1990-01-01")
     year = 1990 + (months // 12)
-    month = (months % 12) + 1  # 0-based months, so +1 to get 1-12
+    month = (months % 12) + 1
     date = pd.to_datetime(f"{year}-{month:02d}-01")
     return date
 
-
 def colname(ind, trans, for_display=False):
-    """Generate a column name for an indicator with the specified transformation.
-
-    Args:
-        ind (str): Indicator key (e.g., 'GDP').
-        trans (str): Transformation type ('raw', 'mom', 'qoq', 'yoy').
-        for_display (bool): If True, use the indicator's description; otherwise, use the key.
-
-    Returns:
-        str: The column name (e.g., 'Gross Domestic Product MoM (%)').
-    """
     base = INDICATORS.get(ind, {}).get("description", ind) if for_display else ind
     if trans == "raw":
         return base
@@ -72,7 +53,6 @@ def colname(ind, trans, for_display=False):
         return f"{base} QoQ (%)"
     else:  # yoy
         return f"{base} YoY (%)"
-
 
 def create_graph(data, col, graph_type):
     """Create a Plotly graph for the given data column and graph type.
@@ -91,7 +71,7 @@ def create_graph(data, col, graph_type):
         for_display=True,
     )
     # Wrap title by inserting <br> after a certain number of characters or words
-    max_chars_per_line = 50  # Adjust this value based on your preference
+    max_chars_per_line = 50
     wrapped_title = ""
     current_line = ""
     for word in f"{display_col} Over Time".split():
@@ -100,57 +80,39 @@ def create_graph(data, col, graph_type):
             current_line = word
         else:
             current_line += (" " if current_line else "") + word
-    wrapped_title += current_line  # Add the last line
+    wrapped_title += current_line
 
     if graph_type == "line":
-        fig = px.line(data, x=data.index, y=col, title=wrapped_title)
+        fig = px.line(
+            data,
+            x=data.index,
+            y=col,
+            title=wrapped_title,
+            line_shape="spline"  # Smooths the line with rounded corners
+        )
     elif graph_type == "bar":
         fig = px.bar(data, x=data.index, y=col, title=wrapped_title)
     else:  # area
         fig = px.area(data, x=data.index, y=col, title=wrapped_title)
 
     fig.update_traces(
-        hovertemplate="<b>%{y:.2f}</b><br>Date: %{x|%Y-%m-%d}<extra></extra>"
+        hovertemplate="<b>%{y:.2f}</b><br>Date: %{x|%Y-%m-%d}<extra></extra>",
+        line=dict(width=2, shape="spline")  # Ensure smooth line and set width
     )
     fig.update_layout(
         title_font=dict(size=18, weight="bold"),
-        title_x=0.5,  # Center the title
+        title_x=0.5,
         xaxis_title="",
-        xaxis=dict(
-            showgrid=False,
-           # title_font=dict(weight="bold"),
-           # tickfont=dict(weight="bold")
-        ),
-        yaxis=dict(
-            showgrid=True,
-            autorange=True,  # Enable y-axis autoscaling by default
-           # title_font=dict(weight="bold"),
-           # tickfont=dict(weight="bold")
-        ),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, autorange=True),
         plot_bgcolor="white",
         paper_bgcolor="white",
     )
     return fig
 
-
 def add_annotations(fig, indicator, show_recessions, show_events, start_dt, end_dt):
-    """Add annotations, recession bars, and key events to a Plotly figure.
-
-    Args:
-        fig (plotly.graph_objs.Figure): The Plotly figure to annotate.
-        indicator (str): The indicator key (e.g., 'GDP').
-        show_recessions (list): List of booleans indicating whether to show recession bars.
-        show_events (list): List of booleans indicating whether to show key events.
-        start_dt (pandas.Timestamp): Start date of the data range.
-        end_dt (pandas.Timestamp): End date of the data range.
-
-    Returns:
-        plotly.graph_objs.Figure: The annotated Plotly figure.
-    """
     series_id = INDICATORS.get(indicator, {}).get("id", None)
-    next_release = (
-        next_release_dates.get(series_id, "Unknown") if series_id else "Unknown"
-    )
+    next_release = next_release_dates.get(series_id, "Unknown") if series_id else "Unknown"
 
     fig.add_annotation(
         text=f"Next Release: {next_release}",
@@ -192,25 +154,15 @@ def add_annotations(fig, indicator, show_recessions, show_events, start_dt, end_
                 )
     return fig
 
-
 # -------------------
 # Callbacks
 # -------------------
 def register_callbacks(app):
-    # Graph Layout Callback
     @app.callback(
         Output("graph-container", "children"),
         Input("indicator-group-selector", "value"),
     )
     def update_graph_layout(group):
-        """Update the layout of graphs based on the selected indicator group.
-
-        Args:
-            group (str): The selected indicator group (e.g., 'macro').
-
-        Returns:
-            list: A list of dash components representing the graph layout.
-        """
         num_graphs = len(INDICATOR_GROUPS.get(group, []))
         if num_graphs == 0:
             return [html.Div("No indicators available for this group.")]
@@ -316,32 +268,20 @@ def register_callbacks(app):
 
         return rows
 
-    # Zoom State Callback
     @app.callback(
         Output({"type": "zoom-store", "index": MATCH}, "data"),
         Input({"type": "indicator", "index": MATCH}, "relayoutData"),
         State({"type": "zoom-store", "index": MATCH}, "data"),
     )
     def update_zoom_state(relayout_data, previous_zoom):
-        """Update the zoom state of a graph based on user interactions.
-
-        Args:
-            relayout_data (dict): Layout data from the graph (e.g., zoom range).
-            previous_zoom (dict): Previous zoom state.
-
-        Returns:
-            dict: Updated zoom state or None to reset.
-        """
         if relayout_data is None:
             return previous_zoom
 
         if "autosize" in relayout_data and relayout_data["autosize"]:
             return None
 
-        # Debug: Print relayoutData to see what Plotly sends
         print(f"Relayout data: {relayout_data}")
 
-        # Only store x-axis range, explicitly ignore y-axis
         if "xaxis.range[0]" in relayout_data and "xaxis.range[1]" in relayout_data:
             return {
                 "xaxis.range": [
@@ -359,7 +299,6 @@ def register_callbacks(app):
 
         return previous_zoom
 
-    # Individual Graph Callback
     @app.callback(
         Output({"type": "indicator", "index": MATCH}, "figure"),
         Input({"type": "indicator-selector", "index": MATCH}, "value"),
@@ -407,23 +346,17 @@ def register_callbacks(app):
             fig, indicator, toggle_recessions, toggle_events, start_dt, end_dt
         )
 
-        # Apply x-axis zoom if present, and force y-axis to autorange
         if zoom_state and "xaxis.range" in zoom_state:
             x_start, x_end = zoom_state["xaxis.range"]
-            # Ensure x-axis range is applied
             fig.update_xaxes(range=[x_start, x_end])
-            # Force y-axis to autorange by updating axes directly
             fig.update_yaxes(autorange=True)
         else:
-            # Ensure y-axis is autoranged even without zoom
             fig.update_yaxes(autorange=True)
 
-        # Debug: Print final layout to confirm settings
         print(f"Final y-axis layout: {fig.layout.yaxis}")
 
         return fig
 
-    # Indicator Options Callback
     @app.callback(
         Output({"type": "indicator-selector", "index": MATCH}, "options"),
         Output({"type": "indicator-selector", "index": MATCH}, "value"),
@@ -431,15 +364,6 @@ def register_callbacks(app):
         Input({"type": "indicator-selector", "index": MATCH}, "id"),
     )
     def update_indicator_options(group, selector_id):
-        """Update the options and default value of an indicator selector dropdown.
-
-        Args:
-            group (str): Selected indicator group.
-            selector_id (dict): ID of the indicator selector dropdown.
-
-        Returns:
-            tuple: (list of options, default value) for the dropdown.
-        """
         group_indicators = INDICATOR_GROUPS.get(group, [])
         if not group_indicators:
             return [], None
@@ -460,21 +384,12 @@ def register_callbacks(app):
         )
         return options, default
 
-    # Date Range Callbacks
     @app.callback(
         Output("date-picker", "start_date"),
         Output("date-picker", "end_date"),
         Input("date-range-slider", "value"),
     )
     def update_date_picker(slider_range):
-        """Update the DatePickerRange based on the RangeSlider's monthly values.
-
-        Args:
-            slider_range (list): RangeSlider value (months since 1990, e.g., [192, 422]).
-
-        Returns:
-            tuple: (start_date, end_date) in 'YYYY-MM-DD' format.
-        """
         today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
         start_months, end_months = slider_range
         start_date = months_to_date(start_months).strftime("%Y-%m-%d")
@@ -485,14 +400,6 @@ def register_callbacks(app):
         Output("date-range-display", "children"), Input("date-range-slider", "value")
     )
     def update_date_range_display(slider_range):
-        """Update the date range display label below the RangeSlider in YYYY-MM format.
-
-        Args:
-            slider_range (list): RangeSlider value (months since 1990).
-
-        Returns:
-            str: Formatted string showing the selected range (e.g., '2006-01 to 2025-03').
-        """
         start_months, end_months = slider_range
         start_date = months_to_date(start_months)
         end_date = months_to_date(end_months)
@@ -500,7 +407,6 @@ def register_callbacks(app):
         end_str = end_date.strftime("%Y-%m")
         return f"Selected Range: {start_str} to {end_str}"
 
-    # Summary Statistics Callback
     @app.callback(
         Output("last-updated", "children"),
         Output("error-message", "children"),
@@ -514,18 +420,6 @@ def register_callbacks(app):
         ],
     )
     def update_summary(indicators, transformations, start_date, end_date, slider_range):
-        """Update the summary statistics based on the selected indicators and date range.
-
-        Args:
-            indicators (list): List of selected indicators.
-            transformations (list): List of selected transformations.
-            start_date (str): Start date from DatePickerRange.
-            end_date (str): End date from DatePickerRange.
-            slider_range (list): RangeSlider value (months since 1990).
-
-        Returns:
-            tuple: (last updated text, error message, summary items).
-        """
         today = pd.to_datetime(datetime.today().strftime("%Y-%m-%d"))
         print("economic_data columns:", economic_data.columns.tolist())
         start_months, end_months = slider_range
@@ -543,7 +437,10 @@ def register_callbacks(app):
             return (
                 "No data available",
                 "Error: No data for selected range",
-                "No data available",
+                dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ["Indicator", "Value", "Δ MoM", "Δ YoY"]],
+                    data=[],
+                ),
             )
 
         cols = [colname(ind, trans) for ind, trans in zip(indicators, transformations)]
@@ -552,38 +449,103 @@ def register_callbacks(app):
             return (
                 "No data available",
                 f"Error: Missing columns {missing_cols}",
-                "No data available",
+                dash_table.DataTable(
+                    columns=[{"name": i, "id": i} for i in ["Indicator", "Value", "Δ MoM", "Δ YoY"]],
+                    data=[],
+                ),
             )
 
         last_date = data.index.max().strftime("%Y-%m-%d")
 
-        summary_items = []
+        table_data = []
         for ind, trans, col in zip(indicators, transformations, cols):
             if col in data.columns:
                 latest_value = data[col].iloc[-1]
-                change = (
-                    (data[col].iloc[-1] - data[col].iloc[-2]) / data[col].iloc[-2] * 100
-                    if len(data) > 1
-                    else 0
-                )
-                display_name = colname(ind, trans, for_display=True)
-                style_dict = {"color": "green" if change >= 0 else "red"}
-                summary_items.append(
-                    html.Div(
-                        [
-                            html.Strong(f"{display_name}:"),
-                            html.Span(
-                                f" {latest_value:.2f}", style={"margin-left": "5px"}
-                            ),
-                            html.Span(f" (Change: {change:.2f}%)", style=style_dict),
-                        ],
-                        style={"margin-bottom": "10px"},
-                    )
-                )
+                mom_col = colname(ind, "mom")
+                yoy_col = colname(ind, "yoy")
+                change_mom = data[mom_col].iloc[-1] if mom_col in data.columns and len(data) > 1 else 0
+                change_yoy = data[yoy_col].iloc[-1] if yoy_col in data.columns and len(data) > 12 else 0
 
-        return f"Last Updated: {last_date}", "", summary_items
+                # Truncate long indicator names with ...
+                indicator_name = INDICATORS[ind]["description"]
+                max_length = 20  # Adjust this value based on your preference
+                truncated_indicator = (indicator_name[:max_length] + "...") if len(indicator_name) > max_length else indicator_name
 
-    # RSS News Callback
+                table_data.append({
+                    "Indicator": truncated_indicator,
+                    "Value": f"{latest_value:.2f}",
+                    "Δ MoM": f"{change_mom:.2f}%",
+                    "Δ YoY": f"{change_yoy:.2f}%",
+                })
+
+        summary_table = dash_table.DataTable(
+            columns=[{"name": i, "id": i} for i in ["Indicator", "Value", "Δ MoM", "Δ YoY"]],
+            data=table_data,
+            style_table={},
+            style_cell={
+                "textAlign": "left",
+                "padding": "5px",
+                "fontSize": "14px",
+                "whiteSpace": "normal",  # Allow text to wrap
+                "overflow": "hidden",    # Hide overflow
+                "textOverflow": "ellipsis",  # Add ... for truncated text
+                "maxWidth": "150px",     # Set a max width for the Indicator column
+            },
+            style_header={
+                "backgroundColor": "rgb(230, 230, 230)",
+                "fontWeight": "bold",
+            },
+            style_data_conditional=[
+                {
+                    "if": {"filter_query": "{Δ MoM} < 0"},
+                    "color": "red",
+                },
+                {
+                    "if": {"filter_query": "{Δ YoY} < 0"},
+                    "color": "red",
+                },
+            ],
+        )
+
+        return f"Last Updated: {last_date}", "", summary_table
+
+
+    @app.callback(
+        Output("date-range-slider", "value"),
+        Input("btn-last-3mo", "n_clicks"),
+        Input("btn-last-6mo", "n_clicks"),
+        Input("btn-last-12mo", "n_clicks"),
+        Input("btn-last-24mo", "n_clicks"),
+        State("date-range-slider", "value"),
+)
+    def update_date_range_from_buttons(n_clicks_3mo, n_clicks_6mo, n_clicks_12mo, n_clicks_24mo, current_range):
+        ctx = callback_context
+        if not ctx.triggered:
+            return current_range
+
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
+        today = datetime.today()
+        current_month = (today.year - 1990) * 12 + today.month - 1  # Months since 1990
+
+        if triggered_id == "btn-last-3mo" and n_clicks_3mo:
+            end_month = current_month
+            start_month = max(0, end_month - 3)
+        elif triggered_id == "btn-last-6mo" and n_clicks_6mo:
+            end_month = current_month
+            start_month = max(0, end_month - 6)
+        elif triggered_id == "btn-last-12mo" and n_clicks_12mo:
+            end_month = current_month
+            start_month = max(0, end_month - 12)
+        elif triggered_id == "btn-last-24mo" and n_clicks_24mo:
+            end_month = current_month
+            start_month = max(0, end_month - 24)
+        else:
+            return current_range
+
+        return [start_month, end_month]
+
+
+
     @app.callback(
         Output("rss-news-list", "children"),
         Input("rss-feed-selector", "value"),
@@ -591,24 +553,10 @@ def register_callbacks(app):
         State("rss-feed-selector", "value"),
     )
     def update_rss_news(selected_feed, n_clicks, current_feed):
-        """Update the RSS news feed based on the selected feed or refresh action.
-
-        Args:
-            selected_feed (str): Value of the RSS feed selector dropdown.
-            n_clicks (int): Number of clicks on the refresh button.
-            current_feed (str): Current value of the RSS feed selector (state).
-
-        Returns:
-            list: List of dash components representing RSS articles.
-        """
         ctx = callback_context
-        triggered_id = (
-            ctx.triggered[0]["prop_id"].split(".")[0] if ctx.triggered else None
-        )
+        triggered_id = ctx.triggered[0]["prop_id"].split(".")[0] if ctx.triggered else None
 
-        feed_to_fetch = (
-            current_feed if triggered_id == "refresh-rss-button" else selected_feed
-        )
+        feed_to_fetch = current_feed if triggered_id == "refresh-rss-button" else selected_feed
 
         if feed_to_fetch not in RSS_FEED_URLS:
             feed_to_fetch = list(RSS_FEED_URLS.keys())[0]
@@ -635,19 +583,11 @@ def register_callbacks(app):
                             ),
                             html.Div(
                                 f"Published: {article['pub_date']}",
-                                style={
-                                    "font-size": "12px",
-                                    "color": "gray",
-                                    "margin-top": "2px",
-                                },
+                                style={"font-size": "12px", "color": "gray", "margin-top": "2px"},
                             ),
                             html.Div(
                                 article["summary"],
-                                style={
-                                    "font-size": "14px",
-                                    "color": "#333",
-                                    "margin-top": "4px",
-                                },
+                                style={"font-size": "14px", "color": "#333", "margin-top": "4px"},
                             ),
                         ],
                         style={"margin-bottom": "10px"},
@@ -656,3 +596,4 @@ def register_callbacks(app):
             )
             for article in articles
         ]
+    
