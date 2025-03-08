@@ -597,3 +597,23 @@ def register_callbacks(app):
             for article in articles
         ]
     
+    @app.callback(
+        Output("summary-stats-container", "children"),
+        [
+            Input({"type": "indicator-selector", "index": ALL}, "value"),
+            Input({"type": "transform-selector", "index": ALL}, "value"),
+            Input("date-picker", "start_date"),
+            Input("date-picker", "end_date"),
+            Input("date-range-slider", "value"),
+        ],
+    )
+    def update_summary_tab(indicators, transformations, start_date, end_date, slider_range):
+        # Reuse the existing update_summary logic
+        last_updated, error_message, summary_table = update_summary(
+            indicators, transformations, start_date, end_date, slider_range
+        )
+        return [
+            html.P(last_updated, style={"text-align": "center", "margin-bottom": "10px"}),
+            html.Div(error_message, style={"color": "red", "text-align": "center", "margin-bottom": "10px"}) if error_message else "",
+            summary_table,
+        ]

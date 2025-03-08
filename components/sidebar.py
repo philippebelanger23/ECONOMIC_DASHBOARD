@@ -119,7 +119,7 @@ sidebar = html.Div(
                     className="",
                     style={"margin-bottom": MARGIN_INSIDE_FILTERS_CHECKLISTS_TO_RSS},
                 ),
-                rss_news,
+                
             ],
             body=True,
             style={"width": "100%", "padding": "5px"},
